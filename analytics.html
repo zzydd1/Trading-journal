@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics — Trading Journal</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="config.js"></script>
+<style>
+  :root { --accent: #f59e0b; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+  }
+
+  .stat-card .value {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 4px 0;
+  }
+
+  .stat-card .label {
+    font-size: 0.78rem;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  .section-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .section-tab {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--font-head);
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .section-tab.active, .section-tab:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .section-content { display: none; }
+  .section-content.active { display: block; }
+
+  .chart-wrap-lg {
+    height: 280px;
+    position: relative;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  .filter-row label {
+    font-size: 0.85rem;
+    color: var(--text2);
+    font-weight: 600;
+  }
+
+  .filter-row select {
+    min-width: 160px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .pnl-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .pnl-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+  }
+
+  .pnl-box .v {
+    font-family: var(--font-head);
+    font-size: 1.3rem;
+    font-weight: 800;
+  }
+
+  .pnl-box .l { font-size: 0.75rem; color: var(--text2); margin-top:2px; }
+</style>
+</head>
+<body>
+<div id="navbarContainer"></div>
+
+<main class="container">
+
+  <div class="page-header">
+    <h1>📊 Analytics</h1>
+    <p>Сводная статистика по всем формам</p>
+  </div>
+
+  <!-- TOP STATS -->
+  <div class="stats-grid" id="topStats">
+    <div class="stat-card"><div class="value" id="stat_total_deals">—</div><div class="label">Всего сделок</div></div>
+    <div class="stat-card"><div class="value" id="stat_win_rate" style="color:#00c853">—</div><div class="label">Win Rate</div></div>
+    <div class="stat-card"><div class="value" id="stat_total_pnl">—</div><div class="label">Итоговый PnL</div></div>
+    <div class="stat-card"><div class="value" id="stat_avg_rr">—</div><div class="label">Средний RR</div></div>
+    <div class="stat-card"><div class="value" id="stat_daily_count">—</div><div class="label">Daily записей</div></div>
+    <div class="stat-card"><div class="value" id="stat_backtest_count">—</div><div class="label">Backtest сделок</div></div>
+  </div>
+
+  <!-- SECTION TABS -->
+  <div class="section-tabs">
+    <button class="section-tab active" onclick="showSection('dealsSection', this)">💹 Сделки (Deals)</button>
+    <button class="section-tab" onclick="showSection('dailySection', this)">☀️ Daily</button>
+    <button class="section-tab" onclick="showSection('backtestSection', this)">🔬 Backtest</button>
+  </div>
+
+  <!-- DEALS SECTION -->
+  <div id="dealsSection" class="section-content active">
+
+    <div class="pnl-summary" id="dealsPnlSummary">
+      <div class="pnl-box"><div class="v" id="d_wins" style="color:#00c853">—</div><div class="l">Прибыльных</div></div>
+      <div class="pnl-box"><div class="v" id="d_losses" style="color:#e53935">—</div><div class="l">Убыточных</div></div>
+      <div class="pnl-box"><div class="v" id="d_avg_win" style="color:#00c853">—</div><div class="l">Средний выигрыш</div></div>
+      <div class="pnl-box"><div class="v" id="d_avg_loss" style="color:#e53935">—</div><div class="l">Средний убыток</div></div>
+      <div class="pnl-box"><div class="v" id="d_max_draw">—</div><div class="l">Макс. просадка</div></div>
+      <div class="pnl-box"><div class="v" id="d_profit_factor">—</div><div class="l">Profit Factor</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">📈 Кумулятивный PnL</div>
+      <div class="chart-wrap-lg"><canvas id="dealsPnlChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Таблица сделок</div>
+      <div class="filter-row">
+        <label>Счёт:</label>
+        <select id="filterAccount" onchange="renderDealsTable()">
+          <option value="">Все счета</option>
+        </select>
+        <label>Тикер:</label>
+        <select id="filterTicker" onchange="renderDealsTable()">
+          <option value="">Все тикеры</option>
+        </select>
+        <label>Результат:</label>
+        <select id="filterResult" onchange="renderDealsTable()">
+          <option value="">Все</option>
+          <option value="Тейк">Тейк</option>
+          <option value="Стоп">Стоп</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto" id="dealsTableContainer">
+        <div style="text-align:center;padding:32px;color:var(--text2)">⏳ Загрузка...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DAILY SECTION -->
+  <div id="dailySection" class="section-content">
+    <div class="card">
+      <div class="card-title">☀️ Daily записи</div>
+      <div style="overflow-x:auto" id="dailyTableContainer">
+        <div style="text-align:center;padding:32px;color:var(--text2)">⏳ Загрузка...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKTEST SECTION -->
+  <div id="backtestSection" class="section-content">
+
+    <div class="pnl-summary" id="backtestPnlSummary">
+      <div class="pnl-box"><div class="v" id="bt_count">—</div><div class="l">Всего бэктестов</div></div>
+      <div class="pnl-box"><div class="v" id="bt_win_rate" style="color:#00c853">—</div><div class="l">Win Rate</div></div>
+      <div class="pnl-box"><div class="v" id="bt_avg_rr">—</div><div class="l">Средний RR</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔬 Таблица Backtest</div>
+      <div style="overflow-x:auto" id="backtestTableContainer">
+        <div style="text-align:center;padding:32px;color:var(--text2)">⏳ Загрузка...</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+let dealsData = null;
+let dailyData = null;
+let backtestData = null;
+let dealsPnlChartInstance = null;
+
+window.addEventListener('load', async () => {
+  initTheme();
+  document.getElementById('navbarContainer').innerHTML = renderNavbar('analytics', '#f59e0b');
+  updateThemeButton(localStorage.getItem('journal-theme') || 'dark');
+  await loadAll();
+});
+
+async function loadAll() {
+  try {
+    const [deals, daily, backtest] = await Promise.all([
+      getRows(CONFIG.SHEETS.DEALS),
+      getRows(CONFIG.SHEETS.DAILY),
+      getRows(CONFIG.SHEETS.BACKTESTS),
+    ]);
+    dealsData = deals;
+    dailyData = daily;
+    backtestData = backtest;
+
+    computeTopStats();
+    populateFilters();
+    renderDealsTable();
+    renderDealsPnlChart();
+    renderDailyTable();
+    renderBacktestTable();
+    computeDealsStats();
+    computeBacktestStats();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function showSection(sectionId, btn) {
+  document.querySelectorAll('.section-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.section-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(sectionId).classList.add('active');
+}
+
+// ---- TOP STATS ----
+function computeTopStats() {
+  // Deals
+  const dRows = dealsData?.rows || [];
+  const dHeaders = dealsData?.headers || [];
+  const pnlIdx = dHeaders.indexOf('PnL');
+  const pnls = dRows.map(r => parseFloat(r.data[pnlIdx])).filter(n => !isNaN(n));
+  const totalPnl = pnls.reduce((a,b) => a+b, 0);
+  const wins = pnls.filter(n => n > 0).length;
+  const winRate = pnls.length ? (wins / pnls.length * 100).toFixed(1) + '%' : '—';
+
+  // RR
+  const rrIdx = dHeaders.indexOf('RR');
+  const rrs = dRows.map(r => parseFloat(r.data[rrIdx])).filter(n => !isNaN(n) && n > 0);
+  const avgRR = rrs.length ? (rrs.reduce((a,b) => a+b, 0) / rrs.length).toFixed(2) : '—';
+
+  document.getElementById('stat_total_deals').textContent = dRows.length || '0';
+  document.getElementById('stat_win_rate').textContent = winRate;
+  document.getElementById('stat_total_pnl').textContent = totalPnl ? (totalPnl > 0 ? '+' : '') + totalPnl.toFixed(2) : '0';
+  document.getElementById('stat_total_pnl').style.color = totalPnl >= 0 ? '#00c853' : '#e53935';
+  document.getElementById('stat_avg_rr').textContent = avgRR !== '—' ? `1:${avgRR}` : '—';
+  document.getElementById('stat_daily_count').textContent = dailyData?.rows?.length || '0';
+  document.getElementById('stat_backtest_count').textContent = backtestData?.rows?.length || '0';
+}
+
+function computeDealsStats() {
+  const dRows = dealsData?.rows || [];
+  const dHeaders = dealsData?.headers || [];
+  const pnlIdx = dHeaders.indexOf('PnL');
+  const pnls = dRows.map(r => parseFloat(r.data[pnlIdx])).filter(n => !isNaN(n));
+
+  const wins = pnls.filter(n => n > 0);
+  const losses = pnls.filter(n => n < 0);
+  const avgWin = wins.length ? (wins.reduce((a,b)=>a+b,0)/wins.length).toFixed(2) : '—';
+  const avgLoss = losses.length ? (losses.reduce((a,b)=>a+b,0)/losses.length).toFixed(2) : '—';
+
+  // Profit factor
+  const sumWin = wins.reduce((a,b)=>a+b,0);
+  const sumLoss = Math.abs(losses.reduce((a,b)=>a+b,0));
+  const pf = sumLoss > 0 ? (sumWin / sumLoss).toFixed(2) : '—';
+
+  // Max drawdown (simplified)
+  let peak = 0, maxDD = 0, cum = 0;
+  pnls.forEach(p => {
+    cum += p;
+    if (cum > peak) peak = cum;
+    const dd = peak - cum;
+    if (dd > maxDD) maxDD = dd;
+  });
+
+  document.getElementById('d_wins').textContent = wins.length;
+  document.getElementById('d_losses').textContent = losses.length;
+  document.getElementById('d_avg_win').textContent = avgWin !== '—' ? `+${avgWin}` : '—';
+  document.getElementById('d_avg_loss').textContent = avgLoss !== '—' ? avgLoss : '—';
+  document.getElementById('d_max_draw').textContent = maxDD > 0 ? `-${maxDD.toFixed(2)}` : '—';
+  document.getElementById('d_profit_factor').textContent = pf;
+}
+
+function computeBacktestStats() {
+  const rows = backtestData?.rows || [];
+  const headers = backtestData?.headers || [];
+  const pnlIdx = headers.indexOf('PnL');
+  const rrIdx = headers.indexOf('RR');
+
+  const pnls = rows.map(r => parseFloat(r.data[pnlIdx])).filter(n => !isNaN(n));
+  const rrs = rows.map(r => parseFloat(r.data[rrIdx])).filter(n => !isNaN(n) && n > 0);
+
+  const wins = pnls.filter(n => n > 0).length;
+  const wr = pnls.length ? (wins/pnls.length*100).toFixed(1)+'%' : '—';
+  const avgRR = rrs.length ? (rrs.reduce((a,b)=>a+b,0)/rrs.length).toFixed(2) : '—';
+
+  document.getElementById('bt_count').textContent = rows.length;
+  document.getElementById('bt_win_rate').textContent = wr;
+  document.getElementById('bt_avg_rr').textContent = avgRR !== '—' ? `1:${avgRR}` : '—';
+}
+
+// ---- FILTERS ----
+function populateFilters() {
+  const dHeaders = dealsData?.headers || [];
+  const rows = dealsData?.rows || [];
+  const accIdx = dHeaders.indexOf('Счёт');
+  const tickIdx = dHeaders.indexOf('Тикер');
+
+  const accounts = [...new Set(rows.map(r => r.data[accIdx]).filter(Boolean))];
+  const tickers = [...new Set(rows.map(r => r.data[tickIdx]).filter(Boolean))];
+
+  const accSel = document.getElementById('filterAccount');
+  const tickSel = document.getElementById('filterTicker');
+
+  accounts.forEach(a => { const o = new Option(a, a); accSel.add(o); });
+  tickers.forEach(t => { const o = new Option(t, t); tickSel.add(o); });
+}
+
+// ---- DEALS TABLE ----
+function renderDealsTable() {
+  const dHeaders = dealsData?.headers || [];
+  const rows = dealsData?.rows || [];
+  const pnlIdx = dHeaders.indexOf('PnL');
+  const accIdx = dHeaders.indexOf('Счёт');
+  const tickIdx = dHeaders.indexOf('Тикер');
+  const resultIdx = dHeaders.indexOf('Результат');
+
+  const filterAcc = document.getElementById('filterAccount')?.value;
+  const filterTick = document.getElementById('filterTicker')?.value;
+  const filterResult = document.getElementById('filterResult')?.value;
+
+  const filtered = rows.filter(r => {
+    if (filterAcc && r.data[accIdx] !== filterAcc) return false;
+    if (filterTick && r.data[tickIdx] !== filterTick) return false;
+    if (filterResult && r.data[resultIdx] !== filterResult) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    document.getElementById('dealsTableContainer').innerHTML = `<div class="empty-state"><div class="icon">💹</div><h3>Нет данных</h3></div>`;
+    return;
+  }
+
+  let html = `<table class="data-table"><thead><tr>
+    ${dHeaders.map(h => `<th>${h}</th>`).join('')}
+  </tr></thead><tbody>`;
+
+  filtered.forEach(r => {
+    html += '<tr>' + r.data.map((v, i) => {
+      if (i === pnlIdx && v !== '') {
+        const n = parseFloat(v);
+        return `<td class="${!isNaN(n) ? (n>=0?'pnl-positive':'pnl-negative') : ''}">${v}</td>`;
+      }
+      return `<td>${v ?? ''}</td>`;
+    }).join('') + '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('dealsTableContainer').innerHTML = html;
+}
+
+// ---- DEALS PnL CHART ----
+function renderDealsPnlChart() {
+  const dHeaders = dealsData?.headers || [];
+  const rows = dealsData?.rows || [];
+  const pnlIdx = dHeaders.indexOf('PnL');
+
+  const pnls = [...rows].reverse().map(r => parseFloat(r.data[pnlIdx])).filter(n => !isNaN(n));
+  if (!pnls.length) return;
+
+  // Cumulative
+  let cum = 0;
+  const cumPnls = pnls.map(p => { cum += p; return parseFloat(cum.toFixed(4)); });
+  const labels = pnls.map((_, i) => `#${i+1}`);
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#9aa0b8' : '#4a5068';
+
+  if (dealsPnlChartInstance) dealsPnlChartInstance.destroy();
+
+  dealsPnlChartInstance = new Chart(document.getElementById('dealsPnlChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Кумулятивный PnL',
+        data: cumPnls,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,0.12)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: pnls.length > 50 ? 0 : 4,
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: isDark ? '#1c2030' : '#fff',
+          titleColor: textColor,
+          bodyColor: '#f59e0b',
+          borderColor: '#f59e0b', borderWidth: 1, padding: 10
+        }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, maxTicksLimit: 10 } },
+        y: { grid: { color: gridColor }, ticks: { color: textColor } }
+      }
+    }
+  });
+}
+
+// ---- DAILY TABLE ----
+function renderDailyTable() {
+  const headers = dailyData?.headers || [];
+  const rows = dailyData?.rows || [];
+
+  if (!rows.length) {
+    document.getElementById('dailyTableContainer').innerHTML = `<div class="empty-state"><div class="icon">☀️</div><h3>Нет Daily записей</h3></div>`;
+    return;
+  }
+
+  let html = `<table class="data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += '<tr>' + r.data.map(v => `<td>${v ?? ''}</td>`).join('') + '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('dailyTableContainer').innerHTML = html;
+}
+
+// ---- BACKTEST TABLE ----
+function renderBacktestTable() {
+  const headers = backtestData?.headers || [];
+  const rows = backtestData?.rows || [];
+  const pnlIdx = headers.indexOf('PnL');
+
+  if (!rows.length) {
+    document.getElementById('backtestTableContainer').innerHTML = `<div class="empty-state"><div class="icon">🔬</div><h3>Нет Backtest записей</h3></div>`;
+    return;
+  }
+
+  let html = `<table class="data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += '<tr>' + r.data.map((v, i) => {
+      if (i === pnlIdx && v !== '') {
+        const n = parseFloat(v);
+        return `<td class="${!isNaN(n) ? (n>=0?'pnl-positive':'pnl-negative') : ''}">${v}</td>`;
+      }
+      return `<td>${v ?? ''}</td>`;
+    }).join('') + '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('backtestTableContainer').innerHTML = html;
+}
+</script>
+</body>
+</html>

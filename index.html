@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Journal</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="config.js"></script>
+<style>
+  :root { --accent: #4587f3; }
+
+  /* LOGIN SCREEN */
+  .login-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .login-overlay.hidden { display: none; }
+
+  .login-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 48px 40px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: var(--shadow);
+  }
+
+  .login-logo {
+    font-family: var(--font-head);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .login-sub {
+    color: var(--text2);
+    margin-bottom: 32px;
+    font-size: 0.9rem;
+  }
+
+  .login-box input[type="password"] {
+    margin-bottom: 12px;
+    text-align: center;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+  }
+
+  .login-error {
+    color: #e53935;
+    font-size: 0.85rem;
+    margin-top: 8px;
+    display: none;
+  }
+
+  .login-theme-toggle {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+  /* MAIN CONTENT */
+  .hero-banner {
+    background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -10%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-title {
+    font-family: var(--font-head);
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-subtitle {
+    color: var(--text2);
+    margin-top: 4px;
+    font-size: 0.95rem;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* NAV CARDS */
+  .form-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-decoration: none;
+    color: var(--text);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .form-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent);
+    transform: scaleX(0);
+    transition: transform 0.25s ease;
+  }
+
+  .form-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+    border-color: var(--card-accent);
+  }
+
+  .form-card:hover::after { transform: scaleX(1); }
+
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+
+  .card-name {
+    font-family: var(--font-head);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .card-desc {
+    font-size: 0.85rem;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  /* CHARTS SECTION */
+  .charts-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .period-selector {
+    display: flex;
+    gap: 4px;
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    border: 1px solid var(--border);
+  }
+
+  .period-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .period-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+
+  .chart-card-title {
+    font-family: var(--font-head);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chart-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .loading-charts {
+    text-align: center;
+    padding: 48px;
+    color: var(--text2);
+  }
+
+  @media (max-width: 600px) {
+    .hero-banner { flex-direction: column; }
+    .hero-title { font-size: 1.6rem; }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN OVERLAY -->
+<div class="login-overlay" id="loginOverlay">
+  <button class="login-theme-toggle" id="loginThemeBtn" onclick="toggleLoginTheme()">🌙</button>
+  <div class="login-box">
+    <div class="login-logo">📈 TJ</div>
+    <p class="login-sub">Trading Journal — введите пароль для входа</p>
+    <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()">
+    <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Войти</button>
+    <p class="login-error" id="loginError">Неверный пароль</p>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<div id="navbarContainer"></div>
+
+<main class="container">
+
+  <!-- HERO -->
+  <div class="hero-banner">
+    <div>
+      <h1 class="hero-title">📈 Trading Journal</h1>
+      <p class="hero-subtitle">Ежедневные чек-листы · Журнал сделок · Бэктест · Аналитика</p>
+    </div>
+    <div class="hero-btns">
+      <a href="analytics.html" class="btn btn-secondary">📊 Analytics</a>
+      <a href="https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID_HERE" target="_blank" class="btn btn-ghost" id="journalLink">📋 Journal</a>
+    </div>
+  </div>
+
+  <!-- FORM CARDS -->
+  <div class="form-cards">
+    <a href="daily.html" class="form-card" style="--card-accent: #4587f3">
+      <div class="card-icon">☀️</div>
+      <div class="card-name" style="color:#4587f3">Daily</div>
+      <div class="card-desc">Ежедневный чек-лист: самочувствие, настроение, план, балансы счетов</div>
+    </a>
+    <a href="deal.html" class="form-card" style="--card-accent: #00ac47">
+      <div class="card-icon">💹</div>
+      <div class="card-name" style="color:#00ac47">Deal</div>
+      <div class="card-desc">Журнал сделок: Pre, Entry, Close. Калькулятор позиции и PnL</div>
+    </a>
+    <a href="backtest.html" class="form-card" style="--card-accent: #9382fa">
+      <div class="card-icon">🔬</div>
+      <div class="card-name" style="color:#9382fa">Backtest</div>
+      <div class="card-desc">Бэктест-сделки: Entry и Close с расчётом RR и PnL</div>
+    </a>
+    <a href="analytics.html" class="form-card" style="--card-accent: #f59e0b">
+      <div class="card-icon">📊</div>
+      <div class="card-name" style="color:#f59e0b">Analytics</div>
+      <div class="card-desc">Сводная статистика по всем формам и счетам</div>
+    </a>
+  </div>
+
+  <!-- BALANCE CHARTS -->
+  <div>
+    <div class="charts-header">
+      <h2 style="font-family: var(--font-head); font-size: 1.3rem;">Балансы счетов</h2>
+      <div class="period-selector">
+        <button class="period-btn active" onclick="setPeriod(7, this)">7 дней</button>
+        <button class="period-btn" onclick="setPeriod(30, this)">1 месяц</button>
+        <button class="period-btn" onclick="setPeriod(365, this)">1 год</button>
+        <button class="period-btn" onclick="setPeriod(0, this)">Всё время</button>
+      </div>
+    </div>
+
+    <div id="chartsContainer">
+      <div class="loading-charts">
+        <div class="spinner" style="width:32px;height:32px;margin:0 auto 12px"></div>
+        <p>Загрузка данных...</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ==========================================
+// LOGIN
+// ==========================================
+function toggleLoginTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('loginThemeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+}
+
+function doLogin() {
+  const pwd = document.getElementById('loginPassword').value;
+  if (pwd === CONFIG.PASSWORD) {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    sessionStorage.setItem('tj-auth', '1');
+    loadCharts();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginPassword').focus();
+  }
+}
+
+// Check auth on load
+window.addEventListener('load', () => {
+  initTheme();
+  document.getElementById('navbarContainer').innerHTML = renderNavbar('home', '#4587f3');
+  updateThemeButton(localStorage.getItem('journal-theme') || 'dark');
+
+  // Update journal link
+  document.getElementById('journalLink').href = 
+    `https://docs.google.com/spreadsheets/d/${CONFIG.SPREADSHEET_ID}`;
+
+  if (sessionStorage.getItem('tj-auth') === '1') {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    loadCharts();
+  } else {
+    document.getElementById('loginPassword').focus();
+    // Update login theme btn
+    const theme = localStorage.getItem('journal-theme') || 'dark';
+    document.getElementById('loginThemeBtn').textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
+});
+
+// ==========================================
+// CHARTS
+// ==========================================
+const ACCOUNT_COLORS = CONFIG.ACCOUNT_COLORS;
+let allDailyData = null;
+let currentPeriod = 7;
+const charts = {};
+
+function setPeriod(days, btn) {
+  currentPeriod = days;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (allDailyData) renderCharts(allDailyData, days);
+}
+
+async function loadCharts() {
+  try {
+    const result = await getRows(CONFIG.SHEETS.DAILY);
+    allDailyData = result;
+    renderCharts(result, currentPeriod);
+  } catch (e) {
+    document.getElementById('chartsContainer').innerHTML = 
+      `<div style="text-align:center;padding:32px;color:var(--text2)">⚠️ Не удалось загрузить данные. Проверьте настройку Apps Script URL.</div>`;
+  }
+}
+
+function filterByPeriod(rows, headers, days) {
+  if (!days || !rows.length) return rows;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const dateIdx = 0;
+  return rows.filter(r => {
+    const d = new Date(r.data[dateIdx]);
+    return d >= cutoff;
+  });
+}
+
+function renderCharts(data, days) {
+  const { headers, rows } = data;
+  if (!headers || !rows) return;
+
+  const accountCols = Object.keys(ACCOUNT_COLORS).map(acc => ({
+    name: acc,
+    color: ACCOUNT_COLORS[acc],
+    idx: headers.indexOf(acc)
+  })).filter(a => a.idx >= 0);
+
+  const filteredRows = filterByPeriod(rows, headers, days);
+
+  // Reverse for chronological order (rows are desc)
+  const chronoRows = [...filteredRows].reverse();
+
+  const labels = chronoRows.map(r => {
+    const d = new Date(r.data[0]);
+    return isNaN(d) ? r.data[0] : `${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}`;
+  });
+
+  let html = '<div class="charts-grid">';
+
+  if (accountCols.length === 0) {
+    html += `<div class="chart-card" style="grid-column:1/-1">
+      <div class="empty-state"><div class="icon">📊</div><h3>Нет данных</h3><p>Заполните форму Daily, чтобы увидеть графики балансов</p></div>
+    </div>`;
+  } else {
+    accountCols.forEach(acc => {
+      const values = chronoRows.map(r => parseFloat(r.data[acc.idx]) || null);
+      const canvasId = `chart_${acc.name.replace(/\s/g,'_')}`;
+      html += `
+        <div class="chart-card">
+          <div class="chart-card-title">
+            <div class="chart-dot" style="background:${acc.color}"></div>
+            ${acc.name}
+          </div>
+          <div class="chart-wrap"><canvas id="${canvasId}"></canvas></div>
+        </div>`;
+    });
+  }
+
+  html += '</div>';
+  document.getElementById('chartsContainer').innerHTML = html;
+
+  // Destroy old charts
+  Object.values(charts).forEach(c => c.destroy());
+
+  // Create charts
+  accountCols.forEach(acc => {
+    const canvasId = `chart_${acc.name.replace(/\s/g,'_')}`;
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+    const textColor = isDark ? '#9aa0b8' : '#4a5068';
+
+    const values = chronoRows.map(r => parseFloat(r.data[acc.idx]) || null);
+
+    charts[acc.name] = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: acc.name,
+          data: values,
+          borderColor: acc.color,
+          backgroundColor: acc.color + '18',
+          fill: true,
+          tension: 0.4,
+          pointRadius: labels.length > 30 ? 0 : 4,
+          pointHoverRadius: 6,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#1c2030' : '#fff',
+            titleColor: textColor,
+            bodyColor: acc.color,
+            borderColor: acc.color,
+            borderWidth: 1,
+            padding: 10,
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 }, maxTicksLimit: 8 }
+          },
+          y: {
+            grid: { color: gridColor },
+            ticks: { color: textColor, font: { size: 11 } }
+          }
+        }
+      }
+    });
+  });
+}
+
+// Re-render charts on theme change
+const origToggle = toggleTheme;
+window.toggleTheme = function() {
+  origToggle();
+  if (allDailyData) {
+    Object.values(charts).forEach(c => c.destroy());
+    renderCharts(allDailyData, currentPeriod);
+  }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily — Trading Journal</title>
+<link rel="stylesheet" href="styles.css">
+<script src="config.js"></script>
+<style>
+  :root { --accent: #4587f3; }
+
+  .daily-header { border-bottom: 3px solid var(--accent); padding-bottom: 4px; display: inline-block; }
+
+  .pnl-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    min-width: 90px;
+    justify-content: center;
+  }
+
+  .pnl-pill.pos { background: rgba(0,200,83,0.12); color: #00c853; border: 1px solid #00c853; }
+  .pnl-pill.neg { background: rgba(229,57,53,0.12); color: #e53935; border: 1px solid #e53935; }
+  .pnl-pill.zero { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+
+  .balance-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .balance-item {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+  }
+
+  .balance-item label {
+    font-size: 0.78rem;
+    color: var(--text2);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .balance-item .currency {
+    font-size: 0.7rem;
+    color: var(--text3);
+    margin-left: 4px;
+  }
+
+  .add-account-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    border: 2px dashed var(--border);
+    background: transparent;
+    color: var(--text2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+  }
+  .add-account-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ANALYTICS TAB */
+  .tab-view { display: none; }
+  .tab-view.active { display: block; }
+
+  .analytics-table-wrap { overflow-x: auto; }
+
+  .date-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    background: var(--bg3);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .already-done-banner {
+    background: color-mix(in srgb, var(--accent) 10%, var(--card));
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+</style>
+</head>
+<body>
+<div id="navbarContainer"></div>
+
+<main class="container">
+
+  <div class="page-header">
+    <h1><span class="daily-header">☀️ Daily</span></h1>
+    <p>Ежедневный чек-лист трейдера</p>
+  </div>
+
+  <!-- PAGE TABS -->
+  <div class="tab-bar" style="max-width:400px">
+    <button class="tab-item active" onclick="showMainTab(this)">📝 Форма</button>
+    <button class="tab-item" onclick="showAnalyticsTab(this)">📊 Analytics</button>
+  </div>
+
+  <!-- FORM TAB -->
+  <div id="formView" class="tab-view active">
+
+    <!-- Already done banner -->
+    <div class="already-done-banner" id="alreadyDoneBanner" style="display:none">
+      <div>
+        <strong style="color:var(--accent)">✅ Форма уже заполнена сегодня</strong>
+        <span style="color:var(--text2); margin-left:8px; font-size:0.85rem">Вы можете отредактировать запись ниже</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="editTodayRecord()">✏️ Редактировать</button>
+    </div>
+
+    <!-- SECTION 1: Общее -->
+    <div class="form-section accent-border">
+      <div class="section-title">📅 Общее</div>
+      <div class="form-grid form-grid-3">
+
+        <!-- Timestamp auto -->
+        <div class="form-group">
+          <label>Дата и время</label>
+          <input type="datetime-local" id="f_timestamp" class="auto-field" readonly>
+        </div>
+
+        <!-- Day of week -->
+        <div class="form-group">
+          <label>День недели <span class="required">*</span></label>
+          <select id="f_day_of_week">
+            <option value="">— выберите —</option>
+            <option>Понедельник</option><option>Вторник</option><option>Среда</option>
+            <option>Четверг</option><option>Пятница</option><option>Суббота</option><option>Воскресенье</option>
+          </select>
+        </div>
+
+        <!-- Plan made -->
+        <div class="form-group">
+          <label>Составлен план? <span class="required">*</span></label>
+          <div class="radio-group" id="f_plan_group">
+            <label class="radio-option"><input type="radio" name="f_plan" value="Да"> Да</label>
+            <label class="radio-option"><input type="radio" name="f_plan" value="Нет"> Нет</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: Состояние -->
+    <div class="form-section accent-border">
+      <div class="section-title">🧠 Состояние</div>
+      <div class="form-grid form-grid-2">
+
+        <!-- Sleep quality -->
+        <div class="form-group">
+          <label>Качество сна? <span class="required">*</span></label>
+          <div class="radio-group" id="f_sleep_group">
+            <label class="radio-option"><input type="radio" name="f_sleep" value="5 (> 8 ч)"> 5 (&gt;8 ч)</label>
+            <label class="radio-option"><input type="radio" name="f_sleep" value="4 (7-8 ч)"> 4 (7–8)</label>
+            <label class="radio-option"><input type="radio" name="f_sleep" value="3 (6-7 ч)"> 3 (6–7)</label>
+            <label class="radio-option"><input type="radio" name="f_sleep" value="2 (5-6 ч)"> 2 (5–6)</label>
+            <label class="radio-option"><input type="radio" name="f_sleep" value="1 (4-5 ч)"> 1 (4–5)</label>
+            <label class="radio-option"><input type="radio" name="f_sleep" value="0 (< 4 ч)"> 0 (&lt;4)</label>
+            <label class="radio-option">
+              <input type="radio" name="f_sleep" value="Другое"> Другое:
+              <input type="text" class="other-input" id="f_sleep_other" placeholder="Укажите">
+            </label>
+          </div>
+        </div>
+
+        <!-- Feel good -->
+        <div class="form-group">
+          <label>Хорошо ли себя чувствую? <span class="required">*</span></label>
+          <div class="radio-group" id="f_feel_group">
+            <label class="radio-option"><input type="radio" name="f_feel" value="Да"> Да</label>
+            <label class="radio-option"><input type="radio" name="f_feel" value="Нет"> Нет</label>
+          </div>
+          <textarea id="f_feel_comment" placeholder="Комментарий (необязательно)" rows="2" style="margin-top:8px"></textarea>
+        </div>
+
+      </div>
+
+      <div class="form-grid form-grid-2" style="margin-top:16px">
+
+        <!-- Mood -->
+        <div class="form-group">
+          <label>Настроение <span class="required">*</span></label>
+          <div class="radio-group" id="f_mood_group">
+            <label class="radio-option"><input type="radio" name="f_mood" value="Бодрое"> Бодрое</label>
+            <label class="radio-option"><input type="radio" name="f_mood" value="Загружен"> Загружен</label>
+            <label class="radio-option"><input type="radio" name="f_mood" value="Нормальное"> Нормальное</label>
+            <label class="radio-option"><input type="radio" name="f_mood" value="Не очень"> Не очень</label>
+            <label class="radio-option"><input type="radio" name="f_mood" value="Расстроен"> Расстроен</label>
+            <label class="radio-option">
+              <input type="radio" name="f_mood" value="Другое"> Другое:
+              <input type="text" class="other-input" id="f_mood_other" placeholder="Укажите">
+            </label>
+          </div>
+        </div>
+
+        <!-- Activity -->
+        <div class="form-group">
+          <label>Активность <span class="required">*</span></label>
+          <div class="radio-group" id="f_activity_group">
+            <label class="radio-option"><input type="radio" name="f_activity" value="Да"> Да</label>
+            <label class="radio-option"><input type="radio" name="f_activity" value="Нет"> Нет</label>
+          </div>
+          <textarea id="f_activity_comment" placeholder="Комментарий об активности (не сохраняется)" rows="2" style="margin-top:8px"></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 3: Рефлексия -->
+    <div class="form-section accent-border">
+      <div class="section-title">💭 Рефлексия</div>
+      <div class="form-grid form-grid-2">
+        <div class="form-group">
+          <label>Основная проблема <span class="required">*</span></label>
+          <textarea id="f_problem" placeholder="Опишите основную проблему" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Решение <span class="required">*</span></label>
+          <textarea id="f_solution" placeholder="Как планируете решить" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="form-grid form-grid-2" style="margin-top:16px">
+        <div class="form-group">
+          <label>Как эти результаты на меня влияют? <span class="required">*</span></label>
+          <textarea id="f_influence" placeholder="Опишите влияние результатов" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Ради чего я торгую? <span class="required">*</span></label>
+          <textarea id="f_why" placeholder="Моя цель в трейдинге" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: Последние сделки -->
+    <div class="form-section accent-border">
+      <div class="section-title">📋 Последние 3 сделки</div>
+      <div id="lastDealsContainer">
+        <div style="color:var(--text2);font-size:0.85rem">⏳ Загрузка PnL последних сделок...</div>
+      </div>
+    </div>
+
+    <!-- SECTION 5: Балансы счетов -->
+    <div class="form-section accent-border">
+      <div class="section-title">💰 Балансы счетов</div>
+      <div class="balance-row" id="balanceRow">
+
+        <div class="balance-item">
+          <label style="color:#c65454">А Финам <span class="currency">₽</span></label>
+          <input type="number" id="f_bal_afinam" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="balance-item">
+          <label style="color:#931c10">С Финам <span class="currency">₽</span></label>
+          <input type="number" id="f_bal_cfinam" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="balance-item">
+          <label style="color:#ff7f27">A Bybit <span class="currency">USDT</span></label>
+          <input type="number" id="f_bal_abybit" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="balance-item">
+          <label style="color:#bd5815">С Bybit <span class="currency">USDT</span></label>
+          <input type="number" id="f_bal_cbybit" placeholder="0.00" step="0.01">
+        </div>
+
+        <div class="balance-item">
+          <label style="color:#a81fb3">С Форекс <span class="currency">₽</span></label>
+          <input type="number" id="f_bal_cforex" placeholder="0.00" step="0.01">
+        </div>
+
+      </div>
+
+      <div id="extraAccountsContainer"></div>
+
+      <button class="add-account-btn" onclick="addExtraAccount()">
+        ➕ Добавить счёт
+      </button>
+    </div>
+
+    <!-- SUBMIT -->
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="resetForm()">🔄 Сбросить</button>
+      <button class="btn btn-primary btn-lg" onclick="submitDaily()">
+        <span id="submitText">💾 Сохранить в таблицу</span>
+        <span id="submitSpinner" style="display:none" class="spinner"></span>
+      </button>
+    </div>
+
+  </div> <!-- /formView -->
+
+  <!-- ANALYTICS TAB -->
+  <div id="analyticsView" class="tab-view">
+    <div class="card">
+      <div class="card-title">📊 История Daily</div>
+      <div id="analyticsContent">
+        <div class="loading-charts" style="text-align:center;padding:32px;color:var(--text2)">
+          ⏳ Загрузка...
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-family:var(--font-head)">✏️ Редактирование записи</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div id="editModalContent"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('load', () => {
+  initTheme();
+  document.getElementById('navbarContainer').innerHTML = renderNavbar('daily', '#4587f3');
+  updateThemeButton(localStorage.getItem('journal-theme') || 'dark');
+  setTimestamp();
+  autoSelectDay();
+  setupRadioHighlight();
+  loadLastDeals();
+  checkTodayRecord();
+
+  // "Other" radio toggles
+  document.querySelectorAll('input[type="radio"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const group = this.closest('.radio-group');
+      if (!group) return;
+      const otherInput = group.querySelector('.other-input');
+      if (otherInput) {
+        if (this.value === 'Другое') otherInput.classList.add('visible');
+        else otherInput.classList.remove('visible');
+      }
+    });
+  });
+});
+
+function setTimestamp() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('f_timestamp').value = ts;
+}
+
+function autoSelectDay() {
+  const days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  const sel = document.getElementById('f_day_of_week');
+  sel.value = days[new Date().getDay()];
+}
+
+function setupRadioHighlight() {
+  document.querySelectorAll('.radio-option input[type="radio"]').forEach(input => {
+    input.addEventListener('change', function() {
+      const group = this.closest('.radio-group');
+      if (!group) return;
+      group.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+      this.closest('.radio-option').classList.add('selected');
+    });
+  });
+}
+
+// ---- LAST DEALS ----
+async function loadLastDeals() {
+  try {
+    const res = await apiCall('getLastDeals', { count: 3 });
+    const container = document.getElementById('lastDealsContainer');
+    if (!res.deals || res.deals.length === 0) {
+      container.innerHTML = '<div style="color:var(--text2);font-size:0.85rem">Нет данных о сделках</div>';
+      return;
+    }
+    let html = '<div style="display:flex;gap:12px;flex-wrap:wrap">';
+    res.deals.forEach((d, i) => {
+      const pnl = parseFloat(d.pnl);
+      const cls = isNaN(pnl) ? 'zero' : pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : 'zero';
+      const label = isNaN(pnl) ? d.pnl || '—' : (pnl > 0 ? '+' : '') + pnl.toFixed(2);
+      html += `<span class="pnl-pill ${cls}">PnL ${i+1}: ${label}</span>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } catch(e) {
+    document.getElementById('lastDealsContainer').innerHTML = '<div style="color:var(--text2);font-size:0.85rem">Ошибка загрузки сделок</div>';
+  }
+}
+
+// ---- CHECK TODAY ----
+let todayRowIndex = null;
+async function checkTodayRecord() {
+  try {
+    const res = await apiCall('getRows', { sheet: CONFIG.SHEETS.DAILY });
+    if (!res.rows) return;
+    const today = todayStr();
+    const found = res.rows.find(r => {
+      const d = new Date(r.data[0]);
+      return !isNaN(d) && formatDate(d) === today;
+    });
+    if (found) {
+      todayRowIndex = found.rowIndex;
+      document.getElementById('alreadyDoneBanner').style.display = 'flex';
+      fillFormFromRow(found.data, res.headers);
+    }
+  } catch(e) {}
+}
+
+function formatDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function fillFormFromRow(row, headers) {
+  const map = {
+    'День недели': 'f_day_of_week',
+    'А Финам': 'f_bal_afinam', 'С Финам': 'f_bal_cfinam',
+    'A Bybit': 'f_bal_abybit', 'С Bybit': 'f_bal_cbybit',
+    'С Форекс': 'f_bal_cforex',
+    'Основная проблема': 'f_problem', 'Решение': 'f_solution',
+    'Как эти результаты на меня влияют?': 'f_influence',
+    'Ради чего я торгую?': 'f_why',
+  };
+  headers.forEach((h, i) => {
+    if (map[h]) {
+      const el = document.getElementById(map[h]);
+      if (el) el.value = row[i] || '';
+    }
+    // Radios
+    ['f_sleep','f_feel','f_mood','f_activity','f_plan'].forEach(rname => {
+      const col = { f_sleep: 'Качество сна?', f_feel: 'Хорошо ли себя чувствую?', 
+                    f_mood: 'Настроение', f_activity: 'Активность', f_plan: 'Составлен план?' }[rname];
+      if (h === col) {
+        const radio = document.querySelector(`input[name="${rname}"][value="${row[i]}"]`);
+        if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+      }
+    });
+  });
+}
+
+function editTodayRecord() {
+  showToast('Отредактируйте поля ниже и нажмите «Сохранить»', 'info');
+  document.getElementById('alreadyDoneBanner').querySelector('.btn').textContent = '✅ Режим редактирования';
+}
+
+// ---- EXTRA ACCOUNTS ----
+let extraAccounts = [];
+function addExtraAccount() {
+  const name = prompt('Название счёта:');
+  if (!name) return;
+  const id = `extra_${Date.now()}`;
+  extraAccounts.push({ name, id });
+  const container = document.getElementById('extraAccountsContainer');
+  container.insertAdjacentHTML('beforeend', `
+    <div class="balance-item" style="margin-top:8px" id="wrap_${id}">
+      <label>${name}</label>
+      <div style="display:flex;gap:8px">
+        <input type="number" id="${id}" placeholder="0.00" step="0.01" style="flex:1">
+        <button onclick="removeAccount('${id}')" class="btn btn-danger btn-sm">✕</button>
+      </div>
+    </div>`);
+}
+
+function removeAccount(id) {
+  document.getElementById(`wrap_${id}`)?.remove();
+  extraAccounts = extraAccounts.filter(a => a.id !== id);
+}
+
+// ---- SUBMIT ----
+async function submitDaily() {
+  // Validate required fields
+  const required = [
+    { id: 'f_day_of_week', label: 'День недели' },
+    { name: 'f_sleep', label: 'Качество сна' },
+    { name: 'f_feel', label: 'Хорошо ли себя чувствую' },
+    { name: 'f_mood', label: 'Настроение' },
+    { name: 'f_activity', label: 'Активность' },
+    { name: 'f_plan', label: 'Составлен план' },
+    { id: 'f_problem', label: 'Основная проблема' },
+    { id: 'f_solution', label: 'Решение' },
+    { id: 'f_influence', label: 'Как результаты влияют' },
+    { id: 'f_why', label: 'Ради чего торгую' },
+  ];
+
+  for (const r of required) {
+    if (r.id && !document.getElementById(r.id)?.value?.trim()) {
+      showToast(`Заполните поле: ${r.label}`, 'error'); return;
+    }
+    if (r.name && !document.querySelector(`input[name="${r.name}"]:checked`)) {
+      showToast(`Выберите: ${r.label}`, 'error'); return;
+    }
+  }
+
+  const getRadio = name => {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    if (!el) return '';
+    if (el.value === 'Другое') {
+      const other = document.getElementById(`${name}_other`);
+      return other ? other.value : 'Другое';
+    }
+    return el.value;
+  };
+
+  const tsVal = document.getElementById('f_timestamp').value;
+  const ts = tsVal ? new Date(tsVal) : new Date();
+
+  const row = [
+    formatDateTime(ts),
+    document.getElementById('f_day_of_week').value,
+    getRadio('f_sleep'),
+    getRadio('f_feel'),
+    document.getElementById('f_feel_comment').value,
+    getRadio('f_mood'),
+    getRadio('f_activity'),
+    getRadio('f_plan'),
+    document.getElementById('f_problem').value,
+    document.getElementById('f_solution').value,
+    document.getElementById('f_influence').value,
+    document.getElementById('f_why').value,
+    document.getElementById('f_bal_afinam').value || '',
+    document.getElementById('f_bal_cfinam').value || '',
+    document.getElementById('f_bal_abybit').value || '',
+    document.getElementById('f_bal_cbybit').value || '',
+    document.getElementById('f_bal_cforex').value || '',
+    ...extraAccounts.map(a => document.getElementById(a.id)?.value || ''),
+  ];
+
+  const submitBtn = document.querySelector('.btn-primary.btn-lg');
+  document.getElementById('submitText').style.display = 'none';
+  document.getElementById('submitSpinner').style.display = 'inline-block';
+  submitBtn.disabled = true;
+
+  try {
+    if (todayRowIndex) {
+      await updateRow(CONFIG.SHEETS.DAILY, todayRowIndex, row);
+      showToast('✅ Запись обновлена!', 'success');
+    } else {
+      await appendRow(CONFIG.SHEETS.DAILY, row);
+      showToast('✅ Данные сохранены!', 'success');
+    }
+    todayRowIndex = null;
+    setTimeout(() => location.reload(), 1500);
+  } catch(e) {
+    showToast('❌ Ошибка сохранения. Проверьте Apps Script URL.', 'error');
+  } finally {
+    document.getElementById('submitText').style.display = 'inline';
+    document.getElementById('submitSpinner').style.display = 'none';
+    submitBtn.disabled = false;
+  }
+}
+
+function resetForm() {
+  if (!confirm('Сбросить все поля?')) return;
+  document.querySelectorAll('#formView input[type="text"], #formView input[type="number"], #formView textarea, #formView select').forEach(el => el.value = '');
+  document.querySelectorAll('#formView input[type="radio"]').forEach(el => el.checked = false);
+  document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
+  setTimestamp();
+  autoSelectDay();
+}
+
+// ---- TABS ----
+function showMainTab(btn) {
+  document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('formView').classList.add('active');
+  document.getElementById('analyticsView').classList.remove('active');
+}
+
+function showAnalyticsTab(btn) {
+  document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('formView').classList.remove('active');
+  document.getElementById('analyticsView').classList.add('active');
+  loadAnalytics();
+}
+
+// ---- ANALYTICS ----
+let analyticsData = null;
+async function loadAnalytics() {
+  if (analyticsData) { renderAnalytics(analyticsData); return; }
+  try {
+    const res = await getRows(CONFIG.SHEETS.DAILY);
+    analyticsData = res;
+    renderAnalytics(res);
+  } catch(e) {
+    document.getElementById('analyticsContent').innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>';
+  }
+}
+
+function renderAnalytics(data) {
+  const { headers, rows } = data;
+  if (!rows || rows.length === 0) {
+    document.getElementById('analyticsContent').innerHTML = '<div class="empty-state"><div class="icon">📋</div><h3>Нет записей</h3><p>Заполните Daily форму</p></div>';
+    return;
+  }
+
+  let html = `
+    <div class="analytics-table-wrap">
+    <table class="data-table">
+    <thead><tr>
+      <th>Дата</th>
+      ${headers.slice(1).map(h => `<th>${h}</th>`).join('')}
+      <th>Действия</th>
+    </tr></thead>
+    <tbody>`;
+
+  rows.forEach(r => {
+    html += `<tr>
+      <td><span class="date-badge">${r.data[0]}</span></td>
+      ${r.data.slice(1).map(v => `<td>${v ?? ''}</td>`).join('')}
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="openEditRow(${r.rowIndex}, ${JSON.stringify(r.data).replace(/"/g,"'")})">✏️</button>
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('analyticsContent').innerHTML = html;
+}
+
+let editRowIndex = null;
+let editHeaders = null;
+
+function openEditRow(rowIndex, rowData) {
+  editRowIndex = rowIndex;
+  const data = analyticsData;
+  editHeaders = data.headers;
+  let html = '<div style="max-height:400px;overflow-y:auto;">';
+  data.headers.forEach((h, i) => {
+    html += `<div class="form-group" style="margin-bottom:12px">
+      <label>${h}</label>
+      <input type="text" id="edit_col_${i}" value="${rowData[i] || ''}">
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('editModalContent').innerHTML = html;
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+async function saveEdit() {
+  if (!editRowIndex) return;
+  const row = editHeaders.map((h, i) => document.getElementById(`edit_col_${i}`)?.value || '');
+  try {
+    await updateRow(CONFIG.SHEETS.DAILY, editRowIndex, row);
+    showToast('✅ Запись обновлена!', 'success');
+    closeEditModal();
+    analyticsData = null;
+    loadAnalytics();
+  } catch(e) {
+    showToast('❌ Ошибка обновления', 'error');
+  }
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.add('hidden');
+  editRowIndex = null;
+}
+</script>
+</body>
+</html>

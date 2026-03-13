@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deal — Trading Journal</title>
+<link rel="stylesheet" href="styles.css">
+<script src="config.js"></script>
+<style>
+  :root { --accent: #00ac47; }
+
+  .rr-badge {
+    background: color-mix(in srgb, var(--accent) 10%, var(--bg3));
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    text-align: center;
+    font-family: var(--font-head);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--accent);
+  }
+
+  .lot-calc-box {
+    background: color-mix(in srgb, var(--accent) 8%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .lot-calc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+
+  .lot-calc-row span:first-child { color: var(--text2); }
+  .lot-calc-row span:last-child { font-weight: 700; color: var(--accent); }
+
+  .partial-close-section {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    background: var(--bg3);
+  }
+
+  .partial-close-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .risk-in-money {
+    padding: 10px 16px;
+    background: rgba(229,57,53,0.1);
+    border: 1px solid rgba(229,57,53,0.3);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: #e53935;
+    font-weight: 600;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="navbarContainer"></div>
+
+<main class="container">
+
+  <div class="page-header">
+    <h1>💹 Deal</h1>
+    <p>Журнал сделок: чек-лист и калькулятор позиции</p>
+  </div>
+
+  <!-- PAGE TABS -->
+  <div class="tab-bar" style="max-width:400px">
+    <button class="tab-item active" onclick="showPageTab('formView', this)">📝 Форма</button>
+    <button class="tab-item" onclick="showPageTab('analyticsView', this)">📊 Analytics</button>
+  </div>
+
+  <!-- FORM VIEW -->
+  <div id="formView" class="tab-view active">
+
+    <!-- Form section tabs: Pre / Entry / Close -->
+    <div class="tab-bar">
+      <button class="tab-item active" id="tabPreBtn" onclick="showFormTab('preTab', this)">🔍 Pre (до сделки)</button>
+      <button class="tab-item" id="tabEntryBtn" onclick="showFormTab('entryTab', this)">📈 Entry (Вход)</button>
+      <button class="tab-item" id="tabCloseBtn" onclick="showFormTab('closeTab', this)">📉 Close (Закрытие)</button>
+    </div>
+
+    <!-- ===== PRE TAB ===== -->
+    <div id="preTab" class="tab-content active">
+
+      <div class="form-section accent-border">
+        <div class="section-title">📅 Общее</div>
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <label>День недели <span class="required">*</span></label>
+            <select id="p_day">
+              <option value="">— выберите —</option>
+              <option>Понедельник</option><option>Вторник</option><option>Среда</option>
+              <option>Четверг</option><option>Пятница</option><option>Суббота</option><option>Воскресенье</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Важные новости? <span class="required">*</span></label>
+            <div class="radio-group" id="p_news_group">
+              <label class="radio-option"><input type="radio" name="p_news" value="Да"> Да</label>
+              <label class="radio-option"><input type="radio" name="p_news" value="Нет"> Нет</label>
+            </div>
+            <textarea id="p_news_comment" placeholder="Комментарий к новостям (необязательно)" rows="2" style="margin-top:8px"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Сделка по плану? <span class="required">*</span></label>
+            <div class="radio-group" id="p_plan_group">
+              <label class="radio-option"><input type="radio" name="p_plan" value="Да"> Да</label>
+              <label class="radio-option"><input type="radio" name="p_plan" value="Нет"> Нет</label>
+              <label class="radio-option">
+                <input type="radio" name="p_plan" value="Другое"> Другое:
+                <input type="text" class="other-input" id="p_plan_other" placeholder="Укажите">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section accent-border">
+        <div class="section-title">🧠 Психология</div>
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>Какие чувства я испытываю?</label>
+            <div class="checkbox-group" id="p_feelings_group">
+              <label class="checkbox-option"><input type="checkbox" name="p_feelings" value="Азарт"> Азарт</label>
+              <label class="checkbox-option"><input type="checkbox" name="p_feelings" value="Жадность"> Жадность</label>
+              <label class="checkbox-option"><input type="checkbox" name="p_feelings" value="Желание отыграться"> Желание отыграться</label>
+              <label class="checkbox-option"><input type="checkbox" name="p_feelings" value="Спокойствие"> Спокойствие</label>
+              <label class="checkbox-option"><input type="checkbox" name="p_feelings" value="Чешутся руки, хочется торговать"> Чешутся руки</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Сделка соответствует ТС? <span class="required">*</span></label>
+            <div class="radio-group" id="p_ts_group">
+              <label class="radio-option"><input type="radio" name="p_ts" value="Да"> Да</label>
+              <label class="radio-option"><input type="radio" name="p_ts" value="Нет"> Нет</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-grid form-grid-2" style="margin-top:16px">
+          <div class="form-group">
+            <label>Планируемый RR</label>
+            <input type="text" id="p_planned_rr" placeholder="1:2">
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="showFormTab('entryTab', document.getElementById('tabEntryBtn'))">
+          ➡️ Далее: Entry
+        </button>
+      </div>
+
+    </div> <!-- /preTab -->
+
+    <!-- ===== ENTRY TAB ===== -->
+    <div id="entryTab" class="tab-content">
+
+      <div class="form-section accent-border">
+        <div class="section-title">⏰ Время и сессия</div>
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <label>Время входа <span class="required">*</span></label>
+            <input type="datetime-local" id="e_time">
+          </div>
+          <div class="form-group">
+            <label>Сессия</label>
+            <div class="radio-group" id="e_session_group">
+              <label class="radio-option"><input type="radio" name="e_session" value="Азия"> Азия</label>
+              <label class="radio-option"><input type="radio" name="e_session" value="Лондон"> Лондон</label>
+              <label class="radio-option"><input type="radio" name="e_session" value="США"> США</label>
+              <label class="radio-option"><input type="radio" name="e_session" value="Россия"> Россия</label>
+              <label class="radio-option">
+                <input type="radio" name="e_session" value="Другое"> Другое:
+                <input type="text" class="other-input" id="e_session_other" placeholder="Укажите">
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Структура <span class="required">*</span></label>
+            <div class="radio-group" id="e_structure_group">
+              <label class="radio-option"><input type="radio" name="e_structure" value="Тренд"> Тренд</label>
+              <label class="radio-option"><input type="radio" name="e_structure" value="Контртренд"> Контртренд</label>
+              <label class="radio-option"><input type="radio" name="e_structure" value="Боковик"> Боковик</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section accent-border">
+        <div class="section-title">📊 POI и паттерн</div>
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>HTF POI <span class="required">*</span></label>
+            <div class="radio-group" id="e_htfpoi_group">
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="B2S ↓"> B2S ↓</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="FVG ↑"> FVG ↑</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="FVG ↓"> FVG ↓</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="IFVG"> IFVG</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="LIQ"> LIQ</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="S2B ↑"> S2B ↑</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="OB ↑"> OB ↑</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="OB ↓"> OB ↓</label>
+              <label class="radio-option"><input type="radio" name="e_htfpoi" value="SMT"> SMT</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>LTF Entry <span class="required">*</span></label>
+            <div class="radio-group" id="e_ltfentry_group">
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="B2S ↓"> B2S ↓</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="FVG ↑"> FVG ↑</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="FVG ↓"> FVG ↓</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="IDM"> IDM</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="IFVG"> IFVG</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="LIQ"> LIQ</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="MKT"> MKT</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="S2B ↑"> S2B ↑</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="OB ↑"> OB ↑</label>
+              <label class="radio-option"><input type="radio" name="e_ltfentry" value="OB ↓"> OB ↓</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Account, Ticker, BoS -->
+      <div class="form-section accent-border">
+        <div class="section-title">💼 Счёт и инструмент</div>
+        <div class="form-grid form-grid-3">
+
+          <div class="form-group">
+            <label>Счёт <span class="required">*</span></label>
+            <div class="radio-group" id="e_account_group">
+              <label class="radio-option"><input type="radio" name="e_account" value="А Финам" onchange="onAccountChange()"> А Финам</label>
+              <label class="radio-option"><input type="radio" name="e_account" value="С Финам" onchange="onAccountChange()"> С Финам</label>
+              <label class="radio-option"><input type="radio" name="e_account" value="A Bybit" onchange="onAccountChange()"> A Bybit</label>
+              <label class="radio-option"><input type="radio" name="e_account" value="С Bybit" onchange="onAccountChange()"> С Bybit</label>
+              <label class="radio-option"><input type="radio" name="e_account" value="С Форекс" onchange="onAccountChange()"> С Форекс</label>
+              <label class="radio-option">
+                <input type="radio" name="e_account" value="Другое" onchange="onAccountChange()"> Другое:
+                <input type="text" class="other-input" id="e_account_other" placeholder="Название">
+              </label>
+            </div>
+            <div style="margin-top:8px;font-size:0.82rem;color:var(--text2)" id="e_account_balance_display"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Тикер <span class="required">*</span></label>
+            <div class="radio-group" id="e_ticker_group">
+              <label class="radio-option"><input type="radio" name="e_ticker" value="XAU" onchange="onTickerChange()"> XAU</label>
+              <label class="radio-option"><input type="radio" name="e_ticker" value="XAG" onchange="onTickerChange()"> XAG</label>
+              <label class="radio-option"><input type="radio" name="e_ticker" value="SPY" onchange="onTickerChange()"> SPY</label>
+              <label class="radio-option"><input type="radio" name="e_ticker" value="NASD" onchange="onTickerChange()"> NASD</label>
+              <label class="radio-option"><input type="radio" name="e_ticker" value="GER" onchange="onTickerChange()"> GER</label>
+              <label class="radio-option"><input type="radio" name="e_ticker" value="EUR" onchange="onTickerChange()"> EUR</label>
+              <label class="radio-option"><input type="radio" name="e_ticker" value="BTC" onchange="onTickerChange()"> BTC</label>
+              <label class="radio-option"><input type="radio" name="e_ticker" value="ETH" onchange="onTickerChange()"> ETH</label>
+              <label class="radio-option">
+                <input type="radio" name="e_ticker" value="Другое" onchange="onTickerChange()"> Другое:
+                <input type="text" class="other-input" id="e_ticker_other" placeholder="Тикер" oninput="onTickerChange()">
+              </label>
+            </div>
+            <div style="margin-top:8px" id="e_ticker_lot_display">
+              <input type="number" id="e_lot_cost" placeholder="Стоимость шага цены (введите вручную)" step="any" oninput="calcLotSize()" style="margin-top:4px">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>BoS</label>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="e_bos" value="15M"> 15M</label>
+              <label class="radio-option"><input type="radio" name="e_bos" value="1H"> 1H</label>
+              <label class="radio-option"><input type="radio" name="e_bos" value="4H"> 4H</label>
+              <label class="radio-option"><input type="radio" name="e_bos" value="1D"> 1D</label>
+              <label class="radio-option">
+                <input type="radio" name="e_bos" value="Другое"> Другое:
+                <input type="text" class="other-input" id="e_bos_other" placeholder="Укажите">
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Position Calculator -->
+      <div class="form-section accent-border">
+        <div class="section-title">🧮 Калькулятор позиции</div>
+        <div class="form-grid form-grid-4">
+          <div class="form-group">
+            <label>Stop Loss <span class="required">*</span></label>
+            <input type="number" id="e_sl" placeholder="0.00" step="any" oninput="calcAll()">
+          </div>
+          <div class="form-group">
+            <label>Entry <span class="required">*</span></label>
+            <input type="number" id="e_entry" placeholder="0.00" step="any" oninput="calcAll()">
+          </div>
+          <div class="form-group">
+            <label>Target <span class="required">*</span></label>
+            <input type="number" id="e_target" placeholder="0.00" step="any" oninput="calcAll()">
+          </div>
+          <div class="form-group">
+            <label>Направление — авто</label>
+            <div id="e_direction_badge" style="padding-top:4px">
+              <span class="direction-badge" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border)">— Ожидание —</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-grid form-grid-4" style="margin-top:16px">
+          <div class="form-group">
+            <label>Риск на сделку <span class="required">*</span></label>
+            <div class="radio-group" id="e_risk_group">
+              <label class="radio-option"><input type="radio" name="e_risk" value="0.5" onchange="calcLotSize()"> 0.5%</label>
+              <label class="radio-option"><input type="radio" name="e_risk" value="1" onchange="calcLotSize()"> 1%</label>
+              <label class="radio-option"><input type="radio" name="e_risk" value="1.5" onchange="calcLotSize()"> 1.5%</label>
+              <label class="radio-option">
+                <input type="radio" name="e_risk" value="custom" onchange="calcLotSize()"> Другое:
+                <input type="number" class="other-input" id="e_risk_other" placeholder="%" step="0.1" oninput="calcLotSize()" min="0.1" max="10">
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>RR — авто</label>
+            <div class="rr-badge" id="e_rr_display">—</div>
+            <input type="hidden" id="e_rr">
+          </div>
+          <div class="form-group">
+            <label>Lot Size — авто</label>
+            <input type="number" id="e_lot_size" class="auto-field" placeholder="Рассчитывается" step="any" oninput="calcRiskMoney()">
+          </div>
+          <div class="form-group">
+            <label>Риск в деньгах (справочно)</label>
+            <div class="risk-in-money" id="e_risk_money">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="form-section accent-border">
+        <div class="section-title">📸 Графики</div>
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>HTF график <span class="required">*</span></label>
+            <input type="text" id="e_htf_chart" placeholder="Ссылка на скриншот HTF">
+          </div>
+          <div class="form-group">
+            <label>LTF график <span class="required">*</span></label>
+            <input type="text" id="e_ltf_chart" placeholder="Ссылка на скриншот LTF">
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="showFormTab('preTab', document.getElementById('tabPreBtn'))">⬅️ Назад: Pre</button>
+        <button class="btn btn-primary" onclick="showFormTab('closeTab', document.getElementById('tabCloseBtn'))">➡️ Далее: Close</button>
+        <button class="btn btn-primary btn-lg" onclick="submitDealEntry()">
+          <span id="entrySubmitText">💾 Сохранить Entry</span>
+          <span id="entrySpinner" style="display:none" class="spinner"></span>
+        </button>
+      </div>
+
+    </div> <!-- /entryTab -->
+
+    <!-- ===== CLOSE TAB ===== -->
+    <div id="closeTab" class="tab-content">
+
+      <div class="form-section accent-border">
+        <div class="section-title">📅 Закрытие позиции</div>
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <label>Выход (дата и время)</label>
+            <input type="datetime-local" id="c_exit_time">
+          </div>
+          <div class="form-group">
+            <label>Результат</label>
+            <div class="radio-group" id="c_result_group">
+              <label class="radio-option"><input type="radio" name="c_result" value="Тейк"> Тейк</label>
+              <label class="radio-option"><input type="radio" name="c_result" value="Стоп"> Стоп</label>
+              <label class="radio-option"><input type="radio" name="c_result" value="Руками"> Руками</label>
+              <label class="radio-option">
+                <input type="radio" name="c_result" value="Другое"> Другое:
+                <input type="text" class="other-input" id="c_result_other" placeholder="Укажите">
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Закрыта по плану?</label>
+            <div class="radio-group" id="c_closed_plan_group">
+              <label class="radio-option"><input type="radio" name="c_closed_plan" value="Да"> Да</label>
+              <label class="radio-option"><input type="radio" name="c_closed_plan" value="Нет"> Нет</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Partial close -->
+      <div class="form-section accent-border">
+        <div class="section-title">💰 Цены закрытия и PnL</div>
+
+        <!-- Part 1 always shown -->
+        <div id="partialCloseContainer">
+          <div class="partial-close-section" id="close_part_1">
+            <div class="partial-close-header">
+              <strong style="font-family:var(--font-head);font-size:0.9rem">Закрытие 1</strong>
+            </div>
+            <div class="partial-close-item">
+              <div class="form-group">
+                <label>Price <span class="required">*</span></label>
+                <input type="number" id="c_price_1" placeholder="0.00" step="any" oninput="calcTotalPnL()">
+              </div>
+              <div class="form-group">
+                <label>Lots <span class="required">*</span></label>
+                <input type="number" id="c_lots_1" placeholder="0" step="any" oninput="calcTotalPnL()">
+              </div>
+              <div></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="add-account-btn" style="margin-top:8px" onclick="addPartialClose()">
+          ➕ Добавить частичное закрытие
+        </button>
+
+        <div class="form-grid form-grid-2" style="margin-top:16px">
+          <div class="form-group">
+            <label>Entry (из вкладки Entry)</label>
+            <input type="number" id="c_entry_ref" placeholder="0.00" step="any" oninput="calcTotalPnL()">
+          </div>
+          <div class="form-group">
+            <label>Stop Loss (из вкладки Entry)</label>
+            <input type="number" id="c_sl_ref" placeholder="0.00" step="any" oninput="calcTotalPnL()">
+          </div>
+          <div class="form-group">
+            <label>Стоимость лота (из тикера)</label>
+            <input type="number" id="c_lot_cost_ref" placeholder="0.00" step="any" oninput="calcTotalPnL()">
+          </div>
+          <div class="form-group">
+            <label>PnL — авто</label>
+            <input type="text" id="c_pnl" class="auto-field" readonly placeholder="Рассчитывается">
+          </div>
+        </div>
+      </div>
+
+      <!-- Close charts -->
+      <div class="form-section accent-border">
+        <div class="section-title">📸 Графики закрытия</div>
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>HTF close график</label>
+            <input type="text" id="c_htf_close" placeholder="Ссылка на скриншот HTF close">
+          </div>
+          <div class="form-group">
+            <label>LTF close график</label>
+            <input type="text" id="c_ltf_close" placeholder="Ссылка на скриншот LTF close">
+          </div>
+        </div>
+      </div>
+
+      <!-- Reflection -->
+      <div class="form-section accent-border">
+        <div class="section-title">💭 Рефлексия</div>
+        <div class="form-grid form-grid-2">
+          <div class="form-group">
+            <label>Что привело к такому решению?</label>
+            <textarea id="c_what_led" placeholder="Причина принятия решения" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Как буду вести себя в будущем?</label>
+            <textarea id="c_future" placeholder="Правильный сценарий и план" rows="3"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="showFormTab('entryTab', document.getElementById('tabEntryBtn'))">⬅️ Назад: Entry</button>
+        <button class="btn btn-primary btn-lg" onclick="submitDealClose()">
+          <span id="closeSubmitText">💾 Сохранить Close</span>
+          <span id="closeSpinner" style="display:none" class="spinner"></span>
+        </button>
+      </div>
+
+    </div> <!-- /closeTab -->
+  </div> <!-- /formView -->
+
+  <!-- ANALYTICS VIEW -->
+  <div id="analyticsView" class="tab-view">
+    <div class="card">
+      <div class="card-title">📊 История сделок</div>
+      <div id="analyticsContent">
+        <div style="text-align:center;padding:32px;color:var(--text2)">⏳ Загрузка...</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 style="font-family:var(--font-head)">✏️ Редактирование сделки</h3>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div id="editModalContent"></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="closeEditModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveEdit()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let tickersData = {};
+let dailyBalances = {};
+let partialCount = 1;
+
+window.addEventListener('load', async () => {
+  initTheme();
+  document.getElementById('navbarContainer').innerHTML = renderNavbar('deal', '#00ac47');
+  updateThemeButton(localStorage.getItem('journal-theme') || 'dark');
+  setupRadios();
+
+  // Set default time
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById('e_time').value = ts;
+
+  const days = ['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+  document.getElementById('p_day').value = days[now.getDay()];
+
+  // Load tickers and balances
+  try {
+    const [tickRes, balRes] = await Promise.all([
+      apiCall('getTickers'),
+      apiCall('getLastDailyBalances')
+    ]);
+    if (tickRes.tickers) {
+      tickRes.tickers.forEach(t => { tickersData[t.ticker] = t.lotCost; });
+    }
+    if (balRes.balances) { dailyBalances = balRes.balances; }
+  } catch(e) { console.warn('Could not load tickers/balances', e); }
+});
+
+function setupRadios() {
+  document.querySelectorAll('.radio-option input[type="radio"]').forEach(input => {
+    input.addEventListener('change', function() {
+      const group = this.closest('.radio-group');
+      if (!group) return;
+      group.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+      this.closest('.radio-option').classList.add('selected');
+      const otherInput = group.querySelector('.other-input');
+      if (otherInput) otherInput.classList.toggle('visible', this.value === 'Другое');
+    });
+  });
+  document.querySelectorAll('.checkbox-option input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', function() {
+      this.closest('.checkbox-option').classList.toggle('selected', this.checked);
+    });
+  });
+}
+
+function showPageTab(tabId, btn) {
+  document.querySelectorAll('.tab-bar:first-of-type .tab-item').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['formView','analyticsView'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  if (tabId === 'analyticsView') loadAnalytics();
+}
+
+function showFormTab(tabId, btn) {
+  ['tabPreBtn','tabEntryBtn','tabCloseBtn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  if (btn) btn.classList.add('active');
+  ['preTab','entryTab','closeTab'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+}
+
+// ---- ACCOUNT CHANGE ----
+function onAccountChange() {
+  const acc = getRadio('e_account');
+  const display = document.getElementById('e_account_balance_display');
+  if (acc && dailyBalances[acc] !== undefined) {
+    display.innerHTML = `💰 Последний баланс: <strong>${dailyBalances[acc]}</strong>`;
+    calcLotSize();
+  } else {
+    display.innerHTML = acc ? '⚠️ Баланс не найден в Daily' : '';
+  }
+}
+
+// ---- TICKER CHANGE ----
+function onTickerChange() {
+  const ticker = getRadio('e_ticker') === 'Другое'
+    ? document.getElementById('e_ticker_other').value
+    : getRadio('e_ticker');
+
+  const lotCostEl = document.getElementById('e_lot_cost');
+
+  if (ticker && tickersData[ticker] !== undefined) {
+    lotCostEl.value = tickersData[ticker];
+    document.getElementById('e_ticker_lot_display').innerHTML = 
+      `<div style="color:var(--text2);font-size:0.82rem">Шаг цены из Tickers: <strong style="color:var(--accent)">${tickersData[ticker]}</strong></div>
+       <input type="number" id="e_lot_cost" placeholder="Стоимость шага цены" step="any" oninput="calcLotSize()" value="${tickersData[ticker]}" style="margin-top:4px">`;
+  } else if (ticker) {
+    document.getElementById('e_ticker_lot_display').innerHTML =
+      `<div style="color:#f59e0b;font-size:0.82rem">⚠️ Тикер не найден. Введите вручную и он будет сохранён.</div>
+       <input type="number" id="e_lot_cost" placeholder="Стоимость шага цены" step="any" oninput="onManualLotCost()" style="margin-top:4px">`;
+  }
+  calcAll();
+}
+
+async function onManualLotCost() {
+  const ticker = getRadio('e_ticker') === 'Другое'
+    ? document.getElementById('e_ticker_other').value
+    : getRadio('e_ticker');
+  const lotCost = parseFloat(document.getElementById('e_lot_cost')?.value);
+  calcLotSize();
+  if (ticker && !isNaN(lotCost) && lotCost > 0) {
+    try {
+      await apiCall('saveTicker', { ticker, lotCost });
+      tickersData[ticker] = lotCost;
+    } catch(e) {}
+  }
+}
+
+// ---- CALCULATIONS ----
+function calcAll() {
+  calcRR();
+  calcLotSize();
+}
+
+function getRadio(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`);
+  if (!el) return '';
+  if (el.value === 'Другое') {
+    const otherId = `${name}_other`;
+    const other = document.getElementById(otherId);
+    return other ? other.value : 'Другое';
+  }
+  return el.value;
+}
+
+function calcRR() {
+  const sl = parseFloat(document.getElementById('e_sl')?.value);
+  const entry = parseFloat(document.getElementById('e_entry')?.value);
+  const target = parseFloat(document.getElementById('e_target')?.value);
+
+  const display = document.getElementById('e_rr_display');
+  const badge = document.getElementById('e_direction_badge');
+
+  if (isNaN(sl) || isNaN(entry) || isNaN(target) || !display) return;
+
+  const risk = Math.abs(entry - sl);
+  const reward = Math.abs(target - entry);
+  const rr = risk > 0 ? reward / risk : 0;
+
+  display.textContent = `1:${rr.toFixed(2)}`;
+  document.getElementById('e_rr').value = rr.toFixed(2);
+
+  const isLong = entry > sl;
+  badge.innerHTML = `<span class="direction-badge direction-${isLong?'long':'short'}">${isLong?'▲ Long':'▼ Short'}</span>`;
+}
+
+function calcLotSize() {
+  const acc = getRadio('e_account');
+  const balance = acc && dailyBalances[acc] ? parseFloat(dailyBalances[acc]) : NaN;
+  const riskPct = getRadio('e_risk') === 'custom'
+    ? parseFloat(document.getElementById('e_risk_other')?.value)
+    : parseFloat(getRadio('e_risk'));
+  const sl = parseFloat(document.getElementById('e_sl')?.value);
+  const entry = parseFloat(document.getElementById('e_entry')?.value);
+  const lotCost = parseFloat(document.getElementById('e_lot_cost')?.value);
+
+  const lotEl = document.getElementById('e_lot_size');
+  const riskMoneyEl = document.getElementById('e_risk_money');
+
+  if (isNaN(balance) || isNaN(riskPct) || isNaN(sl) || isNaN(entry) || isNaN(lotCost) || !lotEl) return;
+
+  const riskMoney = balance * riskPct / 100;
+  const slDistance = Math.abs(entry - sl);
+
+  if (slDistance > 0 && lotCost > 0) {
+    const lotSize = riskMoney / (slDistance * lotCost);
+    lotEl.value = Math.floor(lotSize * 100) / 100;
+    riskMoneyEl.textContent = `Риск: ${riskMoney.toFixed(2)}`;
+  }
+}
+
+function calcRiskMoney() {
+  // When lot size is entered manually
+  const lotSize = parseFloat(document.getElementById('e_lot_size')?.value);
+  const sl = parseFloat(document.getElementById('e_sl')?.value);
+  const entry = parseFloat(document.getElementById('e_entry')?.value);
+  const lotCost = parseFloat(document.getElementById('e_lot_cost')?.value);
+  const riskMoneyEl = document.getElementById('e_risk_money');
+
+  if (!isNaN(lotSize) && !isNaN(sl) && !isNaN(entry) && !isNaN(lotCost)) {
+    const risk = Math.abs(entry - sl) * lotSize * lotCost;
+    riskMoneyEl.textContent = `Риск: ${risk.toFixed(2)}`;
+  }
+}
+
+// ---- PARTIAL CLOSE ----
+function addPartialClose() {
+  partialCount++;
+  const n = partialCount;
+  const container = document.getElementById('partialCloseContainer');
+  container.insertAdjacentHTML('beforeend', `
+    <div class="partial-close-section" id="close_part_${n}" style="margin-top:8px">
+      <div class="partial-close-header">
+        <strong style="font-family:var(--font-head);font-size:0.9rem">Закрытие ${n}</strong>
+        <button class="btn btn-danger btn-sm" onclick="removePartial(${n})">✕</button>
+      </div>
+      <div class="partial-close-item">
+        <div class="form-group"><label>Price ${n}</label>
+          <input type="number" id="c_price_${n}" placeholder="0.00" step="any" oninput="calcTotalPnL()">
+        </div>
+        <div class="form-group"><label>Lots ${n}</label>
+          <input type="number" id="c_lots_${n}" placeholder="0" step="any" oninput="calcTotalPnL()">
+        </div>
+        <div></div>
+      </div>
+    </div>`);
+}
+
+function removePartial(n) {
+  document.getElementById(`close_part_${n}`)?.remove();
+  calcTotalPnL();
+}
+
+function calcTotalPnL() {
+  const entry = parseFloat(document.getElementById('c_entry_ref')?.value);
+  const sl = parseFloat(document.getElementById('c_sl_ref')?.value);
+  const lotCost = parseFloat(document.getElementById('c_lot_cost_ref')?.value);
+  const pnlEl = document.getElementById('c_pnl');
+
+  if (isNaN(entry) || !pnlEl) return;
+
+  const isLong = !isNaN(sl) ? entry > sl : true;
+  let totalPnL = 0;
+  let totalLots = 0;
+
+  for (let i = 1; i <= partialCount; i++) {
+    const priceEl = document.getElementById(`c_price_${i}`);
+    const lotsEl = document.getElementById(`c_lots_${i}`);
+    if (!priceEl || !lotsEl) continue;
+    const price = parseFloat(priceEl.value);
+    const lots = parseFloat(lotsEl.value);
+    if (!isNaN(price) && !isNaN(lots)) {
+      const priceDiff = isLong ? price - entry : entry - price;
+      totalPnL += priceDiff * lots * (isNaN(lotCost) ? 1 : lotCost);
+      totalLots += lots;
+    }
+  }
+
+  if (totalLots > 0) {
+    pnlEl.value = totalPnL.toFixed(2);
+    pnlEl.style.color = totalPnL >= 0 ? '#00c853' : '#e53935';
+  }
+}
+
+// ---- SUBMIT ENTRY ----
+async function submitDealEntry() {
+  const reqs = [
+    { id: 'e_time', label: 'Время входа' },
+    { id: 'e_sl', label: 'Stop Loss' },
+    { id: 'e_entry', label: 'Entry' },
+    { id: 'e_target', label: 'Target' },
+    { id: 'e_htf_chart', label: 'HTF график' },
+    { id: 'e_ltf_chart', label: 'LTF график' },
+  ];
+  for (const r of reqs) {
+    if (!document.getElementById(r.id)?.value?.trim()) {
+      showToast(`Заполните: ${r.label}`, 'error'); return;
+    }
+  }
+  if (!getRadio('e_account')) { showToast('Выберите счёт', 'error'); return; }
+  if (!getRadio('e_ticker')) { showToast('Выберите тикер', 'error'); return; }
+  if (!getRadio('e_structure')) { showToast('Выберите структуру', 'error'); return; }
+  if (!getRadio('e_htfpoi')) { showToast('Выберите HTF POI', 'error'); return; }
+  if (!getRadio('e_ltfentry')) { showToast('Выберите LTF Entry', 'error'); return; }
+  if (!getRadio('e_risk')) { showToast('Выберите риск', 'error'); return; }
+
+  const feelings = Array.from(document.querySelectorAll('input[name="p_feelings"]:checked')).map(c => c.value).join(', ');
+
+  const row = [
+    formatDateTime(new Date(document.getElementById('e_time').value)),
+    document.getElementById('p_day').value,
+    getRadio('p_news'),
+    document.getElementById('p_news_comment').value,
+    getRadio('p_plan'),
+    feelings,
+    getRadio('p_ts'),
+    document.getElementById('p_planned_rr').value,
+    getRadio('e_session'),
+    getRadio('e_structure'),
+    getRadio('e_htfpoi'),
+    getRadio('e_ltfentry'),
+    getRadio('e_bos'),
+    getRadio('e_account'),
+    getRadio('e_ticker'),
+    document.getElementById('e_sl').value,
+    document.getElementById('e_entry').value,
+    document.getElementById('e_target').value,
+    getRadio('e_risk'),
+    document.getElementById('e_lot_size')?.value || '',
+    document.getElementById('e_rr').value,
+    document.getElementById('e_htf_chart').value,
+    document.getElementById('e_ltf_chart').value,
+    '', '', '', '', '', '', '', '' // Close fields
+  ];
+
+  await saveDeal(row, 'entrySubmitText', 'entrySpinner');
+}
+
+// ---- SUBMIT CLOSE ----
+async function submitDealClose() {
+  const closePrices = [], closeLots = [];
+  for (let i = 1; i <= partialCount; i++) {
+    const p = document.getElementById(`c_price_${i}`)?.value;
+    const l = document.getElementById(`c_lots_${i}`)?.value;
+    if (p) closePrices.push(p);
+    if (l) closeLots.push(l);
+  }
+
+  const row = [
+    '', // timestamp
+    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', // Entry fields
+    formatDateTime(new Date(document.getElementById('c_exit_time').value || Date.now())),
+    getRadio('c_result'),
+    getRadio('c_closed_plan'),
+    closePrices.join('; '),
+    closeLots.join('; '),
+    document.getElementById('c_pnl').value,
+    document.getElementById('c_htf_close').value,
+    document.getElementById('c_ltf_close').value,
+    document.getElementById('c_what_led').value,
+    document.getElementById('c_future').value,
+  ];
+
+  await saveDeal(row, 'closeSubmitText', 'closeSpinner');
+}
+
+async function saveDeal(row, textId, spinnerId) {
+  document.getElementById(textId).style.display = 'none';
+  document.getElementById(spinnerId).style.display = 'inline-block';
+  try {
+    await appendRow(CONFIG.SHEETS.DEALS, row);
+    showToast('✅ Данные сохранены!', 'success');
+  } catch(e) {
+    showToast('❌ Ошибка сохранения', 'error');
+  } finally {
+    document.getElementById(textId).style.display = 'inline';
+    document.getElementById(spinnerId).style.display = 'none';
+  }
+}
+
+// ---- ANALYTICS ----
+let analyticsData = null;
+async function loadAnalytics() {
+  if (analyticsData) { renderAnalytics(analyticsData); return; }
+  try {
+    const res = await getRows(CONFIG.SHEETS.DEALS);
+    analyticsData = res;
+    renderAnalytics(res);
+  } catch(e) {
+    document.getElementById('analyticsContent').innerHTML = '<div class="empty-state"><p>Ошибка загрузки</p></div>';
+  }
+}
+
+function renderAnalytics(data) {
+  const { headers, rows } = data;
+  if (!rows || rows.length === 0) {
+    document.getElementById('analyticsContent').innerHTML = `<div class="empty-state"><div class="icon">💹</div><h3>Нет сделок</h3><p>Заполните форму Deal</p></div>`;
+    return;
+  }
+
+  let html = `<div style="overflow-x:auto"><table class="data-table"><thead><tr>
+    ${headers.map(h => `<th>${h}</th>`).join('')}<th>Действия</th>
+  </tr></thead><tbody>`;
+
+  rows.forEach(r => {
+    const pnlIdx = headers.indexOf('PnL');
+    let rowHtml = r.data.map((v, i) => {
+      if (i === pnlIdx && v !== '') {
+        const n = parseFloat(v);
+        return `<td class="${!isNaN(n) ? (n>=0?'pnl-positive':'pnl-negative') : ''}">${v}</td>`;
+      }
+      return `<td>${v ?? ''}</td>`;
+    }).join('');
+    html += `<tr>${rowHtml}<td>
+      <button class="btn btn-secondary btn-sm" onclick="openEditRow(${r.rowIndex})">✏️</button>
+    </td></tr>`;
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('analyticsContent').innerHTML = html;
+}
+
+let editRowIndex = null;
+function openEditRow(rowIndex) {
+  editRowIndex = rowIndex;
+  const row = analyticsData.rows.find(r => r.rowIndex === rowIndex);
+  if (!row) return;
+  let html = '<div style="max-height:400px;overflow-y:auto">';
+  analyticsData.headers.forEach((h, i) => {
+    html += `<div class="form-group" style="margin-bottom:10px">
+      <label>${h}</label>
+      <input type="text" id="edit_col_${i}" value="${row.data[i] || ''}">
+    </div>`;
+  });
+  html += '</div>';
+  document.getElementById('editModalContent').innerHTML = html;
+  document.getElementById('editModal').classList.remove('hidden');
+}
+
+async function saveEdit() {
+  if (!editRowIndex) return;
+  const row = analyticsData.headers.map((h, i) => document.getElementById(`edit_col_${i}`)?.value || '');
+  try {
+    await updateRow(CONFIG.SHEETS.DEALS, editRowIndex, row);
+    showToast('✅ Обновлено!', 'success');
+    closeEditModal();
+    analyticsData = null;
+    loadAnalytics();
+  } catch(e) {
+    showToast('❌ Ошибка обновления', 'error');
+  }
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.add('hidden');
+  editRowIndex = null;
+}
+</script>
+</body>
+</html>
