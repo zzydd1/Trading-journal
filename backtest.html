@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest — Trader Journal</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root { --accent: #9382fa; }
+
+.page-header {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
+  border-bottom: 2px solid var(--accent);
+  padding: 20px 20px 16px;
+}
+
+.page-header-title {
+  font-size: 22px; font-weight: 800;
+  color: var(--text); display: flex; align-items: center; gap: 10px;
+}
+.page-header-sub { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media(max-width:480px){ .calc-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <a href="index.html" class="top-bar-left">
+    <div class="top-bar-logo" style="background:#9382fa">BT</div>
+    <span>Backtest</span>
+  </a>
+  <div class="top-bar-right">
+    <a href="index.html" class="nav-btn">🏠 Главная</a>
+    <a href="#" id="sheetLink" class="nav-btn" target="_blank">📊 Journal</a>
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+  </div>
+</div>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-header-title">🔬 Backtest</div>
+  <div class="page-header-sub">Бэктест сделок — анализ и улучшение стратегии</div>
+</div>
+
+<!-- Tabs -->
+<div style="padding:16px 16px 0; max-width:720px; margin:0 auto;">
+  <div class="tabs-bar">
+    <button class="tab-btn" data-tab="tabEntry">📈 Entry</button>
+    <button class="tab-btn" data-tab="tabClose">📉 Close</button>
+    <button class="tab-btn" data-tab="tabBtAnalytics">📊 Analytics</button>
+  </div>
+</div>
+
+<!-- ======= ENTRY TAB ======= -->
+<div class="tab-content" id="tabEntry">
+<div class="page-content">
+
+  <!-- День недели -->
+  <div class="card">
+    <div class="card-title">День недели <span class="required">*</span></div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'day_of_week','Понедельник')"><input type="radio" name="day_of_week" value="Понедельник"> Пн</label>
+      <label class="radio-option" onclick="selectRadio(this,'day_of_week','Вторник')"><input type="radio" name="day_of_week" value="Вторник"> Вт</label>
+      <label class="radio-option" onclick="selectRadio(this,'day_of_week','Среда')"><input type="radio" name="day_of_week" value="Среда"> Ср</label>
+      <label class="radio-option" onclick="selectRadio(this,'day_of_week','Четверг')"><input type="radio" name="day_of_week" value="Четверг"> Чт</label>
+      <label class="radio-option" onclick="selectRadio(this,'day_of_week','Пятница')"><input type="radio" name="day_of_week" value="Пятница"> Пт</label>
+      <label class="radio-option" onclick="selectRadio(this,'day_of_week','Суббота')"><input type="radio" name="day_of_week" value="Суббота"> Сб</label>
+      <label class="radio-option" onclick="selectRadio(this,'day_of_week','Воскресенье')"><input type="radio" name="day_of_week" value="Воскресенье"> Вс</label>
+    </div>
+  </div>
+
+  <!-- Время -->
+  <div class="card">
+    <div class="card-title">Время входа <span class="required">*</span></div>
+    <input type="datetime-local" name="entry_time" id="entry_time">
+  </div>
+
+  <!-- Сессия -->
+  <div class="card">
+    <div class="card-title">Сессия</div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'session','Азия')"><input type="radio" name="session" value="Азия"> 🌏 Азия</label>
+      <label class="radio-option" onclick="selectRadio(this,'session','Лондон')"><input type="radio" name="session" value="Лондон"> 🇬🇧 Лондон</label>
+      <label class="radio-option" onclick="selectRadio(this,'session','США')"><input type="radio" name="session" value="США"> 🇺🇸 США</label>
+      <label class="radio-option" onclick="selectRadio(this,'session','Россия')"><input type="radio" name="session" value="Россия"> 🇷🇺 Россия</label>
+    </div>
+  </div>
+
+  <!-- Структура -->
+  <div class="card">
+    <div class="card-title">Структура <span class="required">*</span></div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'structure','Тренд')"><input type="radio" name="structure" value="Тренд"> 📈 Тренд</label>
+      <label class="radio-option" onclick="selectRadio(this,'structure','Контртренд')"><input type="radio" name="structure" value="Контртренд"> 🔄 Контртренд</label>
+      <label class="radio-option" onclick="selectRadio(this,'structure','Боковик')"><input type="radio" name="structure" value="Боковик"> ↔️ Боковик</label>
+    </div>
+  </div>
+
+  <!-- HTF POI -->
+  <div class="card">
+    <div class="card-title">HTF POI <span class="required">*</span></div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','B2S ↓')"><input type="radio" name="htf_poi" value="B2S ↓"> B2S ↓</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','FVG ↑')"><input type="radio" name="htf_poi" value="FVG ↑"> FVG ↑</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','FVG ↓')"><input type="radio" name="htf_poi" value="FVG ↓"> FVG ↓</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','IFVG')"><input type="radio" name="htf_poi" value="IFVG"> IFVG</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','LIQ')"><input type="radio" name="htf_poi" value="LIQ"> LIQ</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','S2B ↑')"><input type="radio" name="htf_poi" value="S2B ↑"> S2B ↑</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','OB ↑')"><input type="radio" name="htf_poi" value="OB ↑"> OB ↑</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','OB ↓')"><input type="radio" name="htf_poi" value="OB ↓"> OB ↓</label>
+      <label class="radio-option" onclick="selectRadio(this,'htf_poi','SMT')"><input type="radio" name="htf_poi" value="SMT"> SMT</label>
+    </div>
+  </div>
+
+  <!-- LTF Entry -->
+  <div class="card">
+    <div class="card-title">LTF Entry <span class="required">*</span></div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','B2S ↓')"><input type="radio" name="ltf_entry" value="B2S ↓"> B2S ↓</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','FVG ↑')"><input type="radio" name="ltf_entry" value="FVG ↑"> FVG ↑</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','FVG ↓')"><input type="radio" name="ltf_entry" value="FVG ↓"> FVG ↓</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','IDM')"><input type="radio" name="ltf_entry" value="IDM"> IDM</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','IFVG')"><input type="radio" name="ltf_entry" value="IFVG"> IFVG</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','LIQ')"><input type="radio" name="ltf_entry" value="LIQ"> LIQ</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','MKT')"><input type="radio" name="ltf_entry" value="MKT"> MKT</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','S2B ↑')"><input type="radio" name="ltf_entry" value="S2B ↑"> S2B ↑</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','OB ↑')"><input type="radio" name="ltf_entry" value="OB ↑"> OB ↑</label>
+      <label class="radio-option" onclick="selectRadio(this,'ltf_entry','OB ↓')"><input type="radio" name="ltf_entry" value="OB ↓"> OB ↓</label>
+    </div>
+  </div>
+
+  <!-- Тикер -->
+  <div class="card">
+    <div class="card-title">Тикер <span class="required">*</span></div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'ticker','XAU')"><input type="radio" name="ticker" value="XAU"> XAU</label>
+      <label class="radio-option" onclick="selectRadio(this,'ticker','XAG')"><input type="radio" name="ticker" value="XAG"> XAG</label>
+      <label class="radio-option" onclick="selectRadio(this,'ticker','SPY')"><input type="radio" name="ticker" value="SPY"> SPY</label>
+      <label class="radio-option" onclick="selectRadio(this,'ticker','NASD')"><input type="radio" name="ticker" value="NASD"> NASD</label>
+      <label class="radio-option" onclick="selectRadio(this,'ticker','GER')"><input type="radio" name="ticker" value="GER"> GER</label>
+      <label class="radio-option" onclick="selectRadio(this,'ticker','EUR')"><input type="radio" name="ticker" value="EUR"> EUR</label>
+      <label class="radio-option" onclick="selectRadio(this,'ticker','BTC')"><input type="radio" name="ticker" value="BTC"> BTC</label>
+      <label class="radio-option" onclick="selectRadio(this,'ticker','ETH')"><input type="radio" name="ticker" value="ETH"> ETH</label>
+    </div>
+  </div>
+
+  <!-- BoS -->
+  <div class="card">
+    <div class="card-title">BoS</div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'bos','15M')"><input type="radio" name="bos" value="15M"> 15M</label>
+      <label class="radio-option" onclick="selectRadio(this,'bos','1H')"><input type="radio" name="bos" value="1H"> 1H</label>
+      <label class="radio-option" onclick="selectRadio(this,'bos','4H')"><input type="radio" name="bos" value="4H"> 4H</label>
+      <label class="radio-option" onclick="selectRadio(this,'bos','1D')"><input type="radio" name="bos" value="1D"> 1D</label>
+    </div>
+  </div>
+
+  <!-- Stop Loss / Entry / Target + RR auto -->
+  <div class="card">
+    <div class="card-title">Цены</div>
+    <div style="display:grid; gap:12px;">
+      <div>
+        <label>Stop Loss <span class="req">*</span></label>
+        <input type="number" name="bt_stop_loss" id="bt_sl" placeholder="0.00" step="any" oninput="calcBtRR()">
+      </div>
+      <div>
+        <label>Entry <span class="req">*</span></label>
+        <input type="number" name="bt_entry" id="bt_entry" placeholder="0.00" step="any" oninput="calcBtRR()">
+      </div>
+      <div>
+        <label>Target <span class="req">*</span></label>
+        <input type="number" name="bt_target" id="bt_target" placeholder="0.00" step="any" oninput="calcBtRR()">
+      </div>
+      <div>
+        <label>RR (рассчитывается автоматически)</label>
+        <div class="calc-display" id="btRRDisplay">—</div>
+        <input type="hidden" name="bt_rr" id="bt_rr_hidden">
+      </div>
+    </div>
+  </div>
+
+  <!-- Графики -->
+  <div class="card">
+    <div class="card-title">Графики</div>
+    <div style="display:grid; gap:12px;">
+      <div>
+        <label>HTF График <span class="req">*</span></label>
+        <input type="text" name="htf_chart" placeholder="Ссылка на скриншот или описание">
+      </div>
+      <div>
+        <label>LTF График <span class="req">*</span></label>
+        <input type="text" name="ltf_chart" placeholder="Ссылка на скриншот или описание">
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ======= CLOSE TAB ======= -->
+<div class="tab-content" id="tabClose">
+<div class="page-content">
+
+  <!-- Выход (дата/время) -->
+  <div class="card">
+    <div class="card-title">Выход (дата и время)</div>
+    <input type="datetime-local" name="close_time" id="bt_close_time">
+  </div>
+
+  <!-- Результат -->
+  <div class="card">
+    <div class="card-title">Результат</div>
+    <div class="radio-group horizontal">
+      <label class="radio-option" onclick="selectRadio(this,'result','Тейк')"><input type="radio" name="result" value="Тейк"> 🎯 Тейк</label>
+      <label class="radio-option" onclick="selectRadio(this,'result','Стоп')"><input type="radio" name="result" value="Стоп"> 🛑 Стоп</label>
+      <label class="radio-option" onclick="selectRadio(this,'result','Руками')"><input type="radio" name="result" value="Руками"> ✋ Руками</label>
+    </div>
+  </div>
+
+  <!-- Closed Price + PnL auto -->
+  <div class="card">
+    <div class="card-title">Закрытие</div>
+    <div style="display:grid; gap:12px;">
+      <div>
+        <label>Closed Price</label>
+        <input type="number" name="bt_closed_price" id="bt_cp" placeholder="0.00" step="any" oninput="calcBtPnL()">
+      </div>
+      <div>
+        <label>PnL (рассчитывается автоматически)</label>
+        <div class="calc-display" id="btPnLDisplay">—</div>
+        <input type="hidden" name="bt_pnl" id="bt_pnl_hidden">
+      </div>
+    </div>
+  </div>
+
+  <!-- HTF/LTF Close -->
+  <div class="card">
+    <div class="card-title">Графики закрытия</div>
+    <div style="display:grid; gap:12px;">
+      <div>
+        <label>HTF close</label>
+        <input type="text" name="htf_close" placeholder="Ссылка или описание">
+      </div>
+      <div>
+        <label>LTF close</label>
+        <input type="text" name="ltf_close" placeholder="Ссылка или описание">
+      </div>
+    </div>
+  </div>
+
+  <!-- Рефлексия -->
+  <div class="card">
+    <div class="card-title">📝 Рефлексия</div>
+    <div style="display:grid; gap:12px;">
+      <div>
+        <label>Что привело к такому решению?</label>
+        <textarea name="bt_what_led" placeholder="Опишите причины принятых решений..." rows="2"></textarea>
+      </div>
+      <div>
+        <label>Как надо было действовать?</label>
+        <textarea name="bt_how_to_act" placeholder="Что следовало сделать иначе?" rows="2"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit -->
+  <button class="btn btn-primary" id="btSubmitBtn" onclick="submitBacktest()">
+    ✅ Сохранить бэктест
+  </button>
+  <div style="height:16px"></div>
+
+</div>
+</div>
+
+<!-- ======= ANALYTICS TAB ======= -->
+<div class="tab-content" id="tabBtAnalytics">
+<div class="page-content wide">
+  <div class="section-header">📊 Статистика Backtest</div>
+  <div id="btAnalyticsContainer">
+    <div class="loading"><div class="spinner"></div> Загрузка...</div>
+  </div>
+</div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="shared.js"></script>
+<script>
+document.getElementById('sheetLink').href = CONFIG.SHEET_URL;
+
+// Auto-set day of week
+const dt = getCurrentDateTime();
+document.querySelectorAll('[name="day_of_week"]').forEach(el => {
+  if (el.value === dt.dayOfWeek) el.closest('.radio-option').click();
+});
+
+// Set current datetime
+document.getElementById('entry_time').value = dt.datetime;
+
+function selectRadio(el, name, val) {
+  document.querySelectorAll(`[name="${name}"]`).forEach(r => {
+    r.closest('.radio-option').classList.remove('selected');
+  });
+  el.classList.add('selected');
+  const inp = el.querySelector('input');
+  if (inp) inp.checked = true;
+}
+
+// RR Auto-calc
+function calcBtRR() {
+  const sl = document.getElementById('bt_sl').value;
+  const entry = document.getElementById('bt_entry').value;
+  const target = document.getElementById('bt_target').value;
+  const rr = calcRR(entry, sl, target);
+  const display = document.getElementById('btRRDisplay');
+  if (rr !== null) {
+    display.textContent = `1 : ${rr}`;
+    document.getElementById('bt_rr_hidden').value = rr;
+  } else {
+    display.textContent = '—';
+    document.getElementById('bt_rr_hidden').value = '';
+  }
+}
+
+// PnL Auto-calc (using RR * 1 as reference, needs lot cost — simplified)
+function calcBtPnL() {
+  const entry = parseFloat(document.getElementById('bt_entry').value);
+  const cp = parseFloat(document.getElementById('bt_cp').value);
+  const sl = parseFloat(document.getElementById('bt_sl').value);
+  
+  const display = document.getElementById('btPnLDisplay');
+  
+  if (isNaN(entry) || isNaN(cp) || isNaN(sl)) {
+    display.textContent = '—';
+    return;
+  }
+  
+  // Determine direction from SL
+  const dir = entry > sl ? 'Long' : 'Short';
+  const diff = dir === 'Long' ? cp - entry : entry - cp;
+  const riskDiff = Math.abs(entry - sl);
+  
+  if (riskDiff === 0) return;
+  
+  const pnlRR = (diff / riskDiff).toFixed(2);
+  const cls = diff >= 0 ? 'positive' : 'negative';
+  display.className = `calc-display ${cls}`;
+  display.textContent = `${diff >= 0 ? '+' : ''}${pnlRR}R  (${dir})`;
+  document.getElementById('bt_pnl_hidden').value = pnlRR;
+}
+
+// Submit
+async function submitBacktest() {
+  const btn = document.getElementById('btSubmitBtn');
+  
+  if (!document.querySelector('[name="day_of_week"]:checked')) {
+    showToast('Выберите день недели', 'error'); return;
+  }
+  if (!document.getElementById('bt_sl').value || !document.getElementById('bt_entry').value || !document.getElementById('bt_target').value) {
+    showToast('Заполните цены (SL, Entry, Target)', 'error'); return;
+  }
+  
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="border-color:white;border-top-color:transparent"></div> Сохранение...';
+  
+  const data = {
+    day_of_week: getRadioValue('day_of_week'),
+    entry_time: document.getElementById('entry_time').value,
+    session: getRadioValue('session'),
+    structure: getRadioValue('structure'),
+    htf_poi: getRadioValue('htf_poi'),
+    ltf_entry: getRadioValue('ltf_entry'),
+    ticker: getRadioValue('ticker'),
+    bos: getRadioValue('bos'),
+    stop_loss: document.getElementById('bt_sl').value,
+    entry: document.getElementById('bt_entry').value,
+    target: document.getElementById('bt_target').value,
+    rr: document.getElementById('bt_rr_hidden').value,
+    htf_chart: document.querySelector('[name="htf_chart"]').value,
+    ltf_chart: document.querySelector('[name="ltf_chart"]').value,
+    close_time: document.getElementById('bt_close_time').value,
+    result: getRadioValue('result'),
+    closed_price: document.getElementById('bt_cp').value,
+    pnl: document.getElementById('bt_pnl_hidden').value,
+    htf_close: document.querySelector('[name="htf_close"]').value,
+    ltf_close: document.querySelector('[name="ltf_close"]').value,
+    what_led: document.querySelector('[name="bt_what_led"]').value,
+    how_to_act: document.querySelector('[name="bt_how_to_act"]').value,
+  };
+  
+  const res = await apiCall('appendBacktest', data);
+  
+  btn.disabled = false;
+  btn.innerHTML = '✅ Сохранить бэктест';
+  
+  if (res.success) {
+    showToast('Бэктест сохранён!', 'success');
+  } else {
+    showToast('Ошибка: ' + (res.error || 'Проверьте Apps Script'), 'error');
+  }
+}
+
+// Analytics
+async function loadBtAnalytics() {
+  const container = document.getElementById('btAnalyticsContainer');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  const res = await apiCall('getBacktests');
+  if (!res.rows) { container.innerHTML = '<div class="loading">Нет данных</div>'; return; }
+  renderTable(res.headers, res.rows, container);
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab === 'tabBtAnalytics') loadBtAnalytics();
+  });
+});
+
+initTabs();
+</script>
+</body>
+</html>
